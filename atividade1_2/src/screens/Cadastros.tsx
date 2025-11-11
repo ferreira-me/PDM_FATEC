@@ -5,6 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import type { Aluno, Curso, Disciplina, Professor, Turno } from '../types/school';
 import { USE_API } from '../services/useApiFlag';
+import { colors } from '../theme/colors';
+
 import {
   listarAlunos as apiListarAlunos, criarAluno as apiCriarAluno,
   listarCursos as apiListarCursos, criarCurso as apiCriarCurso,
@@ -268,12 +270,38 @@ export default function Cadastros() {
         {tab === 'aluno' && (
           <View style={styles.card}>
             <Text style={styles.sub}>Cadastrar Aluno</Text>
-            <TextInput style={styles.input} placeholder="Nome" value={nomeAluno} onChangeText={setNomeAluno} />
-            <TextInput style={styles.input} placeholder="E-mail" autoCapitalize="none" keyboardType="email-address" value={emailAluno} onChangeText={setEmailAluno} />
-            <TextInput style={styles.input} placeholder="Matrícula" value={matricula} onChangeText={setMatricula} />
-            <TextInput style={styles.input} placeholder="Curso" value={cursoAluno} onChangeText={setCursoAluno} />
+            <TextInput
+              style={styles.input}
+              placeholder="Nome"
+              placeholderTextColor={colors.textMuted}
+              value={nomeAluno}
+              onChangeText={setNomeAluno}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="E-mail"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={emailAluno}
+              onChangeText={setEmailAluno}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Matrícula"
+              placeholderTextColor={colors.textMuted}
+              value={matricula}
+              onChangeText={setMatricula}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Curso"
+              placeholderTextColor={colors.textMuted}
+              value={cursoAluno}
+              onChangeText={setCursoAluno}
+            />
             {!!erroAluno && <Text style={styles.err}>{erroAluno}</Text>}
-            <TouchableOpacity style={[styles.btn, { backgroundColor: '#28a745' }]} onPress={onAddAluno}>
+            <TouchableOpacity style={styles.btn} onPress={onAddAluno}>
               <Text style={styles.btnText}>Adicionar aluno</Text>
             </TouchableOpacity>
 
@@ -291,15 +319,26 @@ export default function Cadastros() {
         {tab === 'curso' && (
           <View style={styles.card}>
             <Text style={styles.sub}>Cadastrar Curso</Text>
-            <TextInput style={styles.input} placeholder="Nome do curso" value={nomeCurso} onChangeText={setNomeCurso} />
-            <Text style={{ color: '#ddd' }}>Turno</Text>
-            <Picker selectedValue={turno} onValueChange={(v) => setTurno(v)} dropdownIconColor="#fff" style={{ backgroundColor: '#fff', borderRadius: 6 }}>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome do curso"
+              placeholderTextColor={colors.textMuted}
+              value={nomeCurso}
+              onChangeText={setNomeCurso}
+            />
+            <Text style={{ color: colors.textMuted }}>Turno</Text>
+            <Picker
+              selectedValue={turno}
+              onValueChange={(v) => setTurno(v)}
+              dropdownIconColor={colors.text}
+              style={{ backgroundColor: colors.inputBg, borderRadius: 6 }}
+            >
               <Picker.Item label="Matutino" value="matutino" />
               <Picker.Item label="Vespertino" value="vespertino" />
               <Picker.Item label="Noturno" value="noturno" />
             </Picker>
             {!!erroCurso && <Text style={styles.err}>{erroCurso}</Text>}
-            <TouchableOpacity style={[styles.btn, { backgroundColor: '#28a745' }]} onPress={onAddCurso}>
+            <TouchableOpacity style={styles.btn} onPress={onAddCurso}>
               <Text style={styles.btnText}>Adicionar curso</Text>
             </TouchableOpacity>
 
@@ -317,23 +356,46 @@ export default function Cadastros() {
         {tab === 'disciplina' && (
           <View style={styles.card}>
             <Text style={styles.sub}>Cadastrar Disciplina</Text>
-            <TextInput style={styles.input} placeholder="Nome da disciplina" value={nomeDisc} onChangeText={setNomeDisc} />
-            <TextInput style={styles.input} placeholder="Carga horária" keyboardType="numeric" value={carga} onChangeText={setCarga} />
+            <TextInput
+              style={styles.input}
+              placeholder="Nome da disciplina"
+              placeholderTextColor={colors.textMuted}
+              value={nomeDisc}
+              onChangeText={setNomeDisc}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Carga horária"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numeric"
+              value={carga}
+              onChangeText={setCarga}
+            />
 
-            <Text style={{ color: '#ddd' }}>Curso (opcional)</Text>
-            <Picker selectedValue={cursoId} onValueChange={(v) => setCursoId(v)} dropdownIconColor="#fff" style={{ backgroundColor: '#fff', borderRadius: 6 }}>
+            <Text style={{ color: colors.textMuted }}>Curso (opcional)</Text>
+            <Picker
+              selectedValue={cursoId}
+              onValueChange={(v) => setCursoId(v)}
+              dropdownIconColor={colors.text}
+              style={{ backgroundColor: colors.inputBg, borderRadius: 6 }}
+            >
               <Picker.Item label="— nenhum —" value={undefined} />
               {cursos.map(c => <Picker.Item key={c.id} label={c.nome} value={c.id} />)}
             </Picker>
 
-            <Text style={{ color: '#ddd' }}>Professor (opcional)</Text>
-            <Picker selectedValue={professorId} onValueChange={(v) => setProfessorId(v)} dropdownIconColor="#fff" style={{ backgroundColor: '#fff', borderRadius: 6 }}>
+            <Text style={{ color: colors.textMuted }}>Professor (opcional)</Text>
+            <Picker
+              selectedValue={professorId}
+              onValueChange={(v) => setProfessorId(v)}
+              dropdownIconColor={colors.text}
+              style={{ backgroundColor: colors.inputBg, borderRadius: 6 }}
+            >
               <Picker.Item label="— nenhum —" value={undefined} />
               {professores.map(p => <Picker.Item key={p.id} label={p.nome} value={p.id} />)}
             </Picker>
 
             {!!erroDisc && <Text style={styles.err}>{erroDisc}</Text>}
-            <TouchableOpacity style={[styles.btn, { backgroundColor: '#28a745' }]} onPress={onAddDisciplina}>
+            <TouchableOpacity style={styles.btn} onPress={onAddDisciplina}>
               <Text style={styles.btnText}>Adicionar disciplina</Text>
             </TouchableOpacity>
 
@@ -353,11 +415,29 @@ export default function Cadastros() {
         {tab === 'professor' && (
           <View style={styles.card}>
             <Text style={styles.sub}>Cadastrar Professor</Text>
-            <TextInput style={styles.input} placeholder="Nome" value={nomeProf} onChangeText={setNomeProf} />
-            <TextInput style={styles.input} placeholder="Titulação (ex.: Mestre)" value={titulacao} onChangeText={setTitulacao} />
-            <TextInput style={styles.input} placeholder="Tempo de docência (ex.: 5 anos)" value={tempoDocencia} onChangeText={setTempoDocencia} />
+            <TextInput
+              style={styles.input}
+              placeholder="Nome"
+              placeholderTextColor={colors.textMuted}
+              value={nomeProf}
+              onChangeText={setNomeProf}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Titulação (ex.: Mestre)"
+              placeholderTextColor={colors.textMuted}
+              value={titulacao}
+              onChangeText={setTitulacao}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Tempo de docência (ex.: 5 anos)"
+              placeholderTextColor={colors.textMuted}
+              value={tempoDocencia}
+              onChangeText={setTempoDocencia}
+            />
             {!!erroProf && <Text style={styles.err}>{erroProf}</Text>}
-            <TouchableOpacity style={[styles.btn, { backgroundColor: '#28a745' }]} onPress={onAddProfessor}>
+            <TouchableOpacity style={styles.btn} onPress={onAddProfessor}>
               <Text style={styles.btnText}>Adicionar professor</Text>
             </TouchableOpacity>
 
@@ -389,24 +469,73 @@ function TabBtn({ label, active, onPress }: { label: string; active: boolean; on
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#111' },
-  title: { color: '#9acd32', fontWeight: '700', marginBottom: 8, fontSize: 18 },
-  badge: { alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, marginBottom: 8, color: '#000', fontWeight: '700' },
-  ok: { backgroundColor: '#28a745' },
+  container: { flex: 1, padding: 16, backgroundColor: colors.background },
+  title: { color: colors.accent, fontWeight: '700', marginBottom: 8, fontSize: 18 },
+
+  badge: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginBottom: 8,
+    color: '#000',
+    fontWeight: '700',
+  },
+  ok: { backgroundColor: colors.accent },
   fail: { backgroundColor: '#ffc107' },
+
   tabs: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  tabBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#333' },
-  tabBtnActive: { backgroundColor: '#555' },
-  tabBtnText: { color: '#ccc' },
-  tabBtnTextActive: { color: '#fff', fontWeight: '700' },
-  card: { backgroundColor: '#222', padding: 12, borderRadius: 8, gap: 8 },
-  sub: { color: '#fff', fontWeight: '700' },
-  input: { backgroundColor: '#fff', padding: 12, borderRadius: 6 },
-  btn: { padding: 12, borderRadius: 6, alignItems: 'center' },
+
+  tabBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: colors.card,
+  },
+  tabBtnActive: {
+    backgroundColor: colors.primarySoft,
+  },
+  tabBtnText: { color: colors.textMuted },
+  tabBtnTextActive: { color: colors.text, fontWeight: '700' },
+
+  card: {
+    backgroundColor: colors.card,
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  sub: { color: colors.text, fontWeight: '700' },
+
+  input: {
+    backgroundColor: colors.inputBg,
+    padding: 12,
+    borderRadius: 6,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  btn: {
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+  },
   btnText: { color: '#fff', fontWeight: '700' },
-  listTitle: { color: '#9acd32', marginTop: 8, marginBottom: 4, fontWeight: '700' },
-  item: { color: '#fff' },
-  muted: { color: '#aaa' },
-  err: { color: '#ff6b6b' },
-  errCenter: { color: '#ff6b6b', textAlign: 'center', marginBottom: 8 },
+
+  listTitle: {
+    color: colors.accent,
+    marginTop: 8,
+    marginBottom: 4,
+    fontWeight: '700',
+  },
+
+  item: { color: colors.text },
+  muted: { color: colors.textMuted },
+
+  err: { color: colors.danger },
+  errCenter: { color: colors.danger, textAlign: 'center', marginBottom: 8 },
 });

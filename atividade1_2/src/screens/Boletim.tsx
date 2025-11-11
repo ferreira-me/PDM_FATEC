@@ -5,6 +5,8 @@ import type { Disciplina, Nota, BoletimItem } from '../types/school';
 import { calcularMedia, statusPorMedia } from '../utils/grades';
 import { USE_API } from '../services/useApiFlag';
 import { listarDisciplinas, listarNotas, salvarNotas as salvarNotasApi } from '../services/schoolService';
+import { colors } from '../theme/colors';
+
 
 const KEY_DISCIPLINAS = 'cad_disciplinas';
 const KEY_NOTAS = 'boletim_notas';
@@ -111,10 +113,11 @@ export default function Boletim() {
         )}
 
         {boletim.length > 0 && (
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#0275d8' }]} onPress={salvarNotas}>
-            <Text style={styles.btnText}>Salvar notas</Text>
-          </TouchableOpacity>
-        )}
+  <TouchableOpacity style={styles.btn} onPress={salvarNotas}>
+    <Text style={styles.btnText}>Salvar notas</Text>
+  </TouchableOpacity>
+)}
+
       </ScrollView>
     </View>
   );
@@ -128,17 +131,60 @@ function StatusPill({ status }: { status: 'aprovado' | 'exame' | 'reprovado' }) 
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#111' },
-  title: { color: '#9acd32', fontWeight: '700', marginBottom: 12, fontSize: 18 },
-  muted: { color: '#aaa' },
-  card: { backgroundColor: '#222', padding: 12, borderRadius: 8, gap: 8 },
-  sub: { color: '#fff', fontWeight: '700' },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  input: { backgroundColor: '#fff', padding: 12, borderRadius: 6 },
-  label: { color: '#ddd', marginBottom: 4 },
-  media: { color: '#fff', fontWeight: '700' },
-  btn: { padding: 12, borderRadius: 6, alignItems: 'center', marginTop: 4 },
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: colors.background,
+  },
+
+  title: {
+    color: colors.accent,
+    fontWeight: '700',
+    marginBottom: 12,
+    fontSize: 18,
+  },
+
+  muted: { color: colors.textMuted },
+
+  card: {
+    backgroundColor: colors.card,
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  sub: { color: colors.text, fontWeight: '700' },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+
+  input: {
+    backgroundColor: colors.inputBg,
+    padding: 12,
+    borderRadius: 6,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  label: { color: colors.textMuted, marginBottom: 4 },
+
+  media: { color: colors.text, fontWeight: '700' },
+
+  btn: {
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 4,
+    backgroundColor: colors.primary,
+  },
+
   btnText: { color: '#fff', fontWeight: '700' },
 });

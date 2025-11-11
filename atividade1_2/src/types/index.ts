@@ -2,11 +2,9 @@
 import { ParamListBase } from '@react-navigation/native';
 
 export interface AppDrawerParamList extends ParamListBase {
-  ViaCEP: undefined;
-  Consultas: undefined;
   Perfil: undefined;
-  Cadastros: undefined; // tela protegida por perfil
-  Boletim: undefined;   // tela protegida por perfil
+  Cadastros: undefined;
+  Boletim: undefined;
 }
 
 export interface AuthStackParamList extends ParamListBase {

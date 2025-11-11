@@ -1,8 +1,18 @@
+// src/screens/Login.tsx
 import React, { useState } from 'react';
-import { SafeAreaView, View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  SafeAreaView,
+  View,
+  TextInput,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../types';
 import { useAuth } from '../hooks/useAuth';
+import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -30,13 +40,14 @@ export default function Login({ navigation }: Props) {
       <View style={styles.card}>
         <Text style={styles.title}>LOGIN</Text>
         <Text style={styles.hint}>
-          Dica de perfil: use email terminando com{" "}
-          <Text style={styles.bold}>@admin.com</Text> (admin) ou{" "}
+          Dica de perfil: use email terminando com{' '}
+          <Text style={styles.bold}>@admin.com</Text> (admin) ou{' '}
           <Text style={styles.bold}>@gestor.com</Text> (manager). Ex.: maria@admin.com
         </Text>
 
         <TextInput
           placeholder="E-mail"
+          placeholderTextColor={colors.textMuted}
           value={email}
           onChangeText={setEmail}
           style={styles.input}
@@ -47,6 +58,7 @@ export default function Login({ navigation }: Props) {
         />
         <TextInput
           placeholder="Senha"
+          placeholderTextColor={colors.textMuted}
           value={senha}
           onChangeText={setSenha}
           style={styles.input}
@@ -56,11 +68,23 @@ export default function Login({ navigation }: Props) {
 
         {!!erro && <Text style={styles.err}>{erro}</Text>}
 
-        <TouchableOpacity style={[styles.btn, { backgroundColor: '#0275d8' }]} onPress={onLogin} disabled={carregando}>
-          {carregando ? <ActivityIndicator /> : <Text style={styles.btnText}>Entrar</Text>}
+        <TouchableOpacity
+          style={styles.btnPrimary}
+          onPress={onLogin}
+          disabled={carregando}
+        >
+          {carregando ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.btnText}>Entrar</Text>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.btn, { backgroundColor: '#6c757d' }]} onPress={() => navigation.navigate('Registro')} disabled={carregando}>
+        <TouchableOpacity
+          style={styles.btnSecondary}
+          onPress={() => navigation.navigate('Registro')}
+          disabled={carregando}
+        >
           <Text style={styles.btnText}>Criar conta</Text>
         </TouchableOpacity>
       </View>
@@ -69,13 +93,65 @@ export default function Login({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center' },
-  card: { width: '90%', maxWidth: 320, gap: 12, backgroundColor: '#222', padding: 16, borderRadius: 8 },
-  title: { color: '#9acd32', alignSelf: 'center', marginBottom: 4, fontWeight: '700' },
-  hint: { color: '#bbb', fontSize: 12, marginBottom: 4, textAlign: 'center' },
-  bold: { fontWeight: '700', color: '#ddd' },
-  input: { backgroundColor: '#fff', padding: 12, borderRadius: 6 },
-  btn: { padding: 12, borderRadius: 6, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: '700' },
-  err: { color: '#ff6b6b', textAlign: 'center' },
+  safe: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  card: {
+    width: '90%',
+    maxWidth: 320,
+    gap: 12,
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  title: {
+    color: colors.accent,
+    alignSelf: 'center',
+    marginBottom: 4,
+    fontWeight: '700',
+    fontSize: 20,
+  },
+  hint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  bold: {
+    fontWeight: '700',
+    color: colors.text,
+  },
+  input: {
+    backgroundColor: colors.inputBg,
+    padding: 12,
+    borderRadius: 6,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  btnPrimary: {
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+  },
+  btnSecondary: {
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    backgroundColor: colors.primarySoft,
+  },
+  btnText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  err: {
+    color: colors.danger,
+    textAlign: 'center',
+  },
 });
