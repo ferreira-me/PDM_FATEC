@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Curso" ADD COLUMN     "area" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "coordenador" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "duracao" INTEGER NOT NULL DEFAULT 60;

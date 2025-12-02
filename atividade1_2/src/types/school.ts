@@ -12,6 +12,9 @@ export type Curso = {
   id: string;
   nome: string;
   turno: Turno;
+  area: string;
+  duracao: number;
+  coordenador: string;
 };
 
 export type Professor = {

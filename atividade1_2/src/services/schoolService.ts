@@ -19,13 +19,25 @@ export async function listarCursos(): Promise<Curso[]> {
   const { data } = await backend.get<Curso[]>('/cursos');
   return data;
 }
-export async function criarCurso(payload: Pick<Curso, 'nome'|'turno'>): Promise<Curso> {
+export async function criarCurso(
+  payload: Pick<Curso, 'nome' | 'turno' | 'area' | 'duracao' | 'coordenador'>
+): Promise<Curso> {
   const { data } = await backend.post<Curso>('/cursos', payload);
   return data;
 }
+
 export async function removerCurso(id: string): Promise<void> {
   await backend.delete(`/cursos/${id}`);
 }
+
+export async function atualizarCurso(
+  id: string,
+  payload: Partial<Pick<Curso, 'nome' | 'turno' | 'area' | 'duracao' | 'coordenador'>>
+): Promise<Curso> {
+  const { data } = await backend.put<Curso>(`/cursos/${id}`, payload);
+  return data;
+}
+
 
 // -------- Professor --------
 export async function listarProfessores(): Promise<Professor[]> {

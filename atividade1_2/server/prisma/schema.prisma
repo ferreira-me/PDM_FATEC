@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/** JÁ EXISTENTE **/
+// JÁ EXISTENTE
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -18,13 +18,13 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
-/** NOVO: Entrega 2 **/
+// NOVO: Entrega 2
 model Aluno {
   id        String   @id @default(cuid())
   nome      String
   email     String
   matricula String
-  curso     String        // você usa um texto simples na tela
+  curso     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -32,14 +32,18 @@ model Aluno {
 }
 
 model Curso {
-  id        String   @id @default(cuid())
-  nome      String
-  turno     String   // 'matutino' | 'vespertino' | 'noturno'
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  nome        String
+  turno       String   // 'matutino' | 'vespertino' | 'noturno'
+  area        String   @default("")
+  duracao     Int      @default(60)
+  coordenador String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   disciplinas Disciplina[]
 }
+
 
 model Professor {
   id            String   @id @default(cuid())
@@ -68,7 +72,7 @@ model Disciplina {
   notas Nota[]
 }
 
-/** Usado na Entrega 3 (boletim/notas) **/
+// Usado na Entrega 3 (boletim/notas)
 model Nota {
   id           String     @id @default(cuid())
   n1           Float      @default(0)
@@ -84,7 +88,7 @@ model Nota {
 
   @@index([disciplinaId])
   @@index([alunoId])
-  @@unique([disciplinaId, alunoId]) // garante 1 registro por disciplina por aluno (ou único global se alunoId for null)
+  @@unique([disciplinaId, alunoId])
 }
 
 enum Role {

@@ -1,321 +1,756 @@
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+// src/screens/Cadastros.tsx
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
+import type { Aluno, Curso, Disciplina, Professor, Turno } from '../types/school';
+import { USE_API } from '../services/useApiFlag';
+import { colors } from '../theme/colors';
 
-const app = express();
-const prisma = new PrismaClient();
+import {
+  listarAlunos as apiListarAlunos,
+  criarAluno as apiCriarAluno,
+  listarCursos as apiListarCursos,
+  criarCurso as apiCriarCurso,
+  atualizarCurso as apiAtualizarCurso,
+  removerCurso as apiRemoverCurso,
+  listarProfessores as apiListarProfessores,
+  criarProfessor as apiCriarProfessor,
+  listarDisciplinas as apiListarDisciplinas,
+  criarDisciplina as apiCriarDisciplina,
+} from '../services/schoolService';
+import axios from 'axios';
+import { backend } from '../services/backend';
 
-const PORT = Number(process.env.PORT ?? 3333);
-const JWT_SECRET = process.env.JWT_SECRET!;
-if (!JWT_SECRET) throw new Error('Missing JWT_SECRET');
+const KEY_ALUNOS = 'cad_alunos';
+const KEY_CURSOS = 'cad_cursos';
+const KEY_DISCIPLINAS = 'cad_disciplinas';
+const KEY_PROFESSORES = 'cad_professores';
 
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+type Tab = 'aluno' | 'curso' | 'disciplina' | 'professor';
 
-// Healthcheck
-app.get('/health', (_req, res) => res.json({ ok: true }));
+export default function Cadastros() {
+  const [tab, setTab] = useState<Tab>('aluno');
+  const [erroGeral, setErroGeral] = useState<string | null>(null);
+  const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
-// Helpers
-function signToken(user: { id: string; email: string; role: string; name: string }) {
-  return jwt.sign(
-    { sub: user.id, email: user.email, role: user.role, name: user.name },
-    JWT_SECRET,
-    { expiresIn: '7d' }
+  // ALUNO
+  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [nomeAluno, setNomeAluno] = useState('');
+  const [emailAluno, setEmailAluno] = useState('');
+  const [matricula, setMatricula] = useState('');
+  const [cursoAluno, setCursoAluno] = useState('');
+  const [erroAluno, setErroAluno] = useState<string | null>(null);
+
+  // CURSO
+  const [cursos, setCursos] = useState<Curso[]>([]);
+  const [nomeCurso, setNomeCurso] = useState('');
+  const [turno, setTurno] = useState<Turno>('noturno');
+  const [areaCurso, setAreaCurso] = useState('');
+  const [duracaoCurso, setDuracaoCurso] = useState('60');
+  const [coordenadorCurso, setCoordenadorCurso] = useState('');
+  const [editandoCursoId, setEditandoCursoId] = useState<string | null>(null);
+  const [erroCurso, setErroCurso] = useState<string | null>(null);
+
+  // PROFESSOR
+  const [professores, setProfessores] = useState<Professor[]>([]);
+  const [nomeProf, setNomeProf] = useState('');
+  const [titulacao, setTitulacao] = useState('Mestre');
+  const [tempoDocencia, setTempoDocencia] = useState('5 anos');
+  const [erroProf, setErroProf] = useState<string | null>(null);
+
+  // DISCIPLINA
+  const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
+  const [nomeDisc, setNomeDisc] = useState('');
+  const [carga, setCarga] = useState('60');
+  const [cursoId, setCursoId] = useState<string | undefined>(undefined);
+  const [professorId, setProfessorId] = useState<string | undefined>(undefined);
+  const [erroDisc, setErroDisc] = useState<string | null>(null);
+
+  function fromAxiosError(e: any): string {
+    if (axios.isAxiosError(e)) {
+      const status = e.response?.status;
+      const msg =
+        (e.response?.data as any)?.message ||
+        (e.response?.data as any)?.error ||
+        e.message;
+      return `Erro API${status ? ` (${status})` : ''}: ${msg}`;
+    }
+    return e?.message ?? 'Erro inesperado';
+  }
+
+  // PING da API (tenta /health, senão cai para /alunos)
+  async function pingApi() {
+    try {
+      await backend.get('/health').catch(async () => {
+        await backend.get('/alunos');
+      });
+      setApiOnline(true);
+      setErroGeral(null);
+    } catch (e) {
+      setApiOnline(false);
+      setErroGeral(fromAxiosError(e));
+    }
+  }
+
+  // carregar dados
+  useEffect(() => {
+    (async () => {
+      if (USE_API) {
+        await pingApi();
+        try {
+          const [a, c, d, p] = await Promise.all([
+            apiListarAlunos(),
+            apiListarCursos(),
+            apiListarDisciplinas(),
+            apiListarProfessores(),
+          ]);
+          setAlunos(a);
+          setCursos(c);
+          setDisciplinas(d);
+          setProfessores(p);
+        } catch (e) {
+          setErroGeral(fromAxiosError(e));
+        }
+      } else {
+        const [a, c, d, p] = await Promise.all([
+          AsyncStorage.getItem(KEY_ALUNOS),
+          AsyncStorage.getItem(KEY_CURSOS),
+          AsyncStorage.getItem(KEY_DISCIPLINAS),
+          AsyncStorage.getItem(KEY_PROFESSORES),
+        ]);
+        if (a) setAlunos(JSON.parse(a));
+        if (c) setCursos(JSON.parse(c));
+        if (d) setDisciplinas(JSON.parse(d));
+        if (p) setProfessores(JSON.parse(p));
+      }
+    })();
+  }, []);
+
+  // helpers persistência local
+  async function saveAlunos(next: Aluno[]) {
+    setAlunos(next);
+    await AsyncStorage.setItem(KEY_ALUNOS, JSON.stringify(next));
+  }
+  async function saveCursos(next: Curso[]) {
+    setCursos(next);
+    await AsyncStorage.setItem(KEY_CURSOS, JSON.stringify(next));
+  }
+  async function saveDisciplinas(next: Disciplina[]) {
+    setDisciplinas(next);
+    await AsyncStorage.setItem(KEY_DISCIPLINAS, JSON.stringify(next));
+  }
+  async function saveProfessores(next: Professor[]) {
+    setProfessores(next);
+    await AsyncStorage.setItem(KEY_PROFESSORES, JSON.stringify(next));
+  }
+
+  // SUBMITS
+  async function onAddAluno() {
+    setErroAluno(null);
+    setErroGeral(null);
+    if (!nomeAluno.trim() || !emailAluno.includes('@') || !matricula.trim() || !cursoAluno.trim()) {
+      setErroAluno('Informe nome, e-mail, matrícula e curso válidos.');
+      return;
+    }
+    try {
+      if (USE_API) {
+        const novo = await apiCriarAluno({
+          nome: nomeAluno.trim(),
+          email: emailAluno.trim(),
+          matricula: matricula.trim(),
+          curso: cursoAluno.trim(),
+        });
+        setAlunos(prev => [...prev, novo]);
+      } else {
+        const novo: Aluno = {
+          id: cryptoRandom(),
+          nome: nomeAluno.trim(),
+          email: emailAluno.trim(),
+          matricula: matricula.trim(),
+          curso: cursoAluno.trim(),
+        };
+        await saveAlunos([...alunos, novo]);
+      }
+      setNomeAluno('');
+      setEmailAluno('');
+      setMatricula('');
+      setCursoAluno('');
+    } catch (e) {
+      setErroGeral(fromAxiosError(e));
+    }
+  }
+
+  async function onAddCurso() {
+    setErroCurso(null);
+    setErroGeral(null);
+    const duracaoNum = Number(duracaoCurso);
+    if (
+      !nomeCurso.trim() ||
+      !areaCurso.trim() ||
+      !coordenadorCurso.trim() ||
+      !isFinite(duracaoNum) ||
+      duracaoNum <= 0
+    ) {
+      setErroCurso('Informe nome, área, duração (>0) e coordenador.');
+      return;
+    }
+    try {
+      if (USE_API) {
+        const novo = await apiCriarCurso({
+          nome: nomeCurso.trim(),
+          turno,
+          area: areaCurso.trim(),
+          duracao: duracaoNum,
+          coordenador: coordenadorCurso.trim(),
+        });
+        setCursos(prev => [...prev, novo]);
+      } else {
+        const novo: Curso = {
+          id: cryptoRandom(),
+          nome: nomeCurso.trim(),
+          turno,
+          area: areaCurso.trim(),
+          duracao: duracaoNum,
+          coordenador: coordenadorCurso.trim(),
+        };
+        await saveCursos([...cursos, novo]);
+      }
+      setNomeCurso('');
+      setAreaCurso('');
+      setDuracaoCurso('60');
+      setCoordenadorCurso('');
+      setTurno('noturno');
+    } catch (e) {
+      setErroGeral(fromAxiosError(e));
+    }
+  }
+
+  async function onUpdateCurso() {
+    if (!editandoCursoId) return;
+    setErroCurso(null);
+    setErroGeral(null);
+    const duracaoNum = Number(duracaoCurso);
+    if (
+      !nomeCurso.trim() ||
+      !areaCurso.trim() ||
+      !coordenadorCurso.trim() ||
+      !isFinite(duracaoNum) ||
+      duracaoNum <= 0
+    ) {
+      setErroCurso('Informe nome, área, duração (>0) e coordenador.');
+      return;
+    }
+    try {
+      if (USE_API) {
+        const atualizado = await apiAtualizarCurso(editandoCursoId, {
+          nome: nomeCurso.trim(),
+          turno,
+          area: areaCurso.trim(),
+          duracao: duracaoNum,
+          coordenador: coordenadorCurso.trim(),
+        });
+        setCursos(prev => prev.map(c => (c.id === atualizado.id ? atualizado : c)));
+      } else {
+        const atualizado: Curso = {
+          id: editandoCursoId,
+          nome: nomeCurso.trim(),
+          turno,
+          area: areaCurso.trim(),
+          duracao: duracaoNum,
+          coordenador: coordenadorCurso.trim(),
+        };
+        const next = cursos.map(c => (c.id === editandoCursoId ? atualizado : c));
+        await saveCursos(next);
+        setCursos(next);
+      }
+      setEditandoCursoId(null);
+      setNomeCurso('');
+      setAreaCurso('');
+      setDuracaoCurso('60');
+      setCoordenadorCurso('');
+      setTurno('noturno');
+    } catch (e) {
+      setErroGeral(fromAxiosError(e));
+    }
+  }
+
+  async function onAddProfessor() {
+    setErroProf(null);
+    setErroGeral(null);
+    if (!nomeProf.trim() || !titulacao.trim() || !tempoDocencia.trim()) {
+      setErroProf('Informe nome, titulação e tempo de docência.');
+      return;
+    }
+    try {
+      if (USE_API) {
+        const novo = await apiCriarProfessor({
+          nome: nomeProf.trim(),
+          titulacao: titulacao.trim(),
+          tempoDocencia: tempoDocencia.trim(),
+        });
+        setProfessores(prev => [...prev, novo]);
+      } else {
+        const novo: Professor = {
+          id: cryptoRandom(),
+          nome: nomeProf.trim(),
+          titulacao: titulacao.trim(),
+          tempoDocencia: tempoDocencia.trim(),
+        };
+        await saveProfessores([...professores, novo]);
+      }
+      setNomeProf('');
+      setTitulacao('Mestre');
+      setTempoDocencia('5 anos');
+    } catch (e) {
+      setErroGeral(fromAxiosError(e));
+    }
+  }
+
+  async function onAddDisciplina() {
+    setErroDisc(null);
+    setErroGeral(null);
+    const cargaNum = Number(carga);
+    if (!nomeDisc.trim() || !isFinite(cargaNum) || cargaNum <= 0) {
+      setErroDisc('Informe nome e carga horária (> 0).');
+      return;
+    }
+    try {
+      if (USE_API) {
+        const novo = await apiCriarDisciplina({
+          nome: nomeDisc.trim(),
+          cargaHoraria: cargaNum,
+          cursoId,
+          professorId,
+        });
+        setDisciplinas(prev => [...prev, novo]);
+      } else {
+        const novo: Disciplina = {
+          id: cryptoRandom(),
+          nome: nomeDisc.trim(),
+          cargaHoraria: cargaNum,
+          cursoId,
+          professorId,
+        };
+        await saveDisciplinas([...disciplinas, novo]);
+      }
+      setNomeDisc('');
+      setCarga('60');
+      setCursoId(undefined);
+      setProfessorId(undefined);
+    } catch (e) {
+      setErroGeral(fromAxiosError(e));
+    }
+  }
+
+  const cursoMap = useMemo(
+    () => Object.fromEntries(cursos.map(c => [c.id, c.nome])),
+    [cursos],
+  );
+  const profMap = useMemo(
+    () => Object.fromEntries(professores.map(p => [p.id, p.nome])),
+    [professores],
+  );
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Cadastros</Text>
+
+      {USE_API && (
+        <Text style={[styles.badge, apiOnline ? styles.ok : styles.fail]}>
+          API: {apiOnline === null ? 'verificando...' : apiOnline ? 'ONLINE' : 'OFFLINE'}
+        </Text>
+      )}
+      {!!erroGeral && <Text style={styles.errCenter}>{erroGeral}</Text>}
+
+      <View style={styles.tabs}>
+        <TabBtn label="Aluno" active={tab === 'aluno'} onPress={() => setTab('aluno')} />
+        <TabBtn label="Curso" active={tab === 'curso'} onPress={() => setTab('curso')} />
+        <TabBtn
+          label="Disciplina"
+          active={tab === 'disciplina'}
+          onPress={() => setTab('disciplina')}
+        />
+        <TabBtn
+          label="Professor"
+          active={tab === 'professor'}
+          onPress={() => setTab('professor')}
+        />
+      </View>
+
+      <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 40 }}>
+        {tab === 'aluno' && (
+          <View style={styles.card}>
+            <Text style={styles.sub}>Cadastrar Aluno</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome"
+              placeholderTextColor={colors.textMuted}
+              value={nomeAluno}
+              onChangeText={setNomeAluno}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="E-mail"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={emailAluno}
+              onChangeText={setEmailAluno}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Matrícula"
+              placeholderTextColor={colors.textMuted}
+              value={matricula}
+              onChangeText={setMatricula}
+            />
+
+            <Text style={{ color: colors.textMuted }}>Curso</Text>
+            <Picker
+              selectedValue={cursoAluno}
+              onValueChange={v => setCursoAluno(v)}
+              dropdownIconColor={colors.text}
+              style={{ backgroundColor: colors.inputBg, borderRadius: 6 }}
+            >
+              <Picker.Item label="Selecione um curso" value="" />
+              
+                <Picker.Item key={c.id} label={c.nome} value={c.nome} />
+              ))}
+            </Picker>
+
+            {!!erroAluno && <Text style={styles.err}>{erroAluno}</Text>}
+            <TouchableOpacity style={styles.btn} onPress={onAddAluno}>
+              <Text style={styles.btnText}>Adicionar aluno</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.listTitle}>Alunos cadastrados</Text>
+            {alunos.length === 0 ? (
+              <Text style={styles.muted}>Nenhum aluno.</Text>
+            ) : (
+              alunos.map(a => (
+                <Text key={a.id} style={styles.item}>
+                  • {a.nome} — {a.email} — {a.matricula} — {a.curso}
+                </Text>
+
+              ))
+            )}
+          </View>
+        )}
+
+        {tab === 'curso' && (
+          <View style={styles.card}>
+            <Text style={styles.sub}>
+              {editandoCursoId ? 'Editar Curso' : 'Cadastrar Curso'}
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Nome do curso"
+              placeholderTextColor={colors.textMuted}
+              value={nomeCurso}
+              onChangeText={setNomeCurso}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Área"
+              placeholderTextColor={colors.textMuted}
+              value={areaCurso}
+              onChangeText={setAreaCurso}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Duração (horas)"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numeric"
+              value={duracaoCurso}
+              onChangeText={setDuracaoCurso}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Coordenador"
+              placeholderTextColor={colors.textMuted}
+              value={coordenadorCurso}
+              onChangeText={setCoordenadorCurso}
+            />
+
+            <Text style={{ color: colors.textMuted }}>Turno</Text>
+            <Picker
+              selectedValue={turno}
+              onValueChange={v => setTurno(v)}
+              dropdownIconColor={colors.text}
+              style={{ backgroundColor: colors.inputBg, borderRadius: 6 }}
+            >
+              <Picker.Item label="Matutino" value="matutino" />
+              <Picker.Item label="Vespertino" value="vespertino" />
+              <Picker.Item label="Noturno" value="noturno" />
+            </Picker>
+
+            {!!erroCurso && <Text style={styles.err}>{erroCurso}</Text>}
+            <TouchableOpacity
+              style={styles.btn}
+              onPress={editandoCursoId ? onUpdateCurso : onAddCurso}
+            >
+              <Text style={styles.btnText}>
+                {editandoCursoId ? 'Salvar alterações' : 'Adicionar curso'}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.listTitle}>Cursos cadastrados</Text>
+            {cursos.length === 0 ? (
+              <Text style={styles.muted}>Nenhum curso.</Text>
+            ) : (
+              cursos.map(c => (
+                <View key={c.id} style={{ marginBottom: 6 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditandoCursoId(c.id);
+                      setNomeCurso(c.nome);
+                      setTurno(c.turno);
+                      setAreaCurso(c.area);
+                      setDuracaoCurso(String(c.duracao));
+                      setCoordenadorCurso(c.coordenador);
+                    }}
+                  >
+                    <Text style={styles.item}>
+                      • {c.nome} — {c.turno} — {c.area} — {c.duracao}h — Coord.:{' '}
+                      {c.coordenador}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={async () => {
+                      try {
+                        if (USE_API) {
+                          await apiRemoverCurso(c.id);
+                        } else {
+                          const rest = cursos.filter(x => x.id !== c.id);
+                          await saveCursos(rest);
+                        }
+                        setCursos(prev => prev.filter(x => x.id !== c.id));
+                        if (editandoCursoId === c.id) {
+                          setEditandoCursoId(null);
+                          setNomeCurso('');
+                          setAreaCurso('');
+                          setDuracaoCurso('60');
+                          setCoordenadorCurso('');
+                          setTurno('noturno');
+                        }
+                      } catch (e) {
+                        setErroGeral(fromAxiosError(e));
+                      }
+                    }}
+                  >
+                    <Text style={[styles.item, { color: colors.danger }]}>Remover</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+
+        {tab === 'disciplina' && (
+          <View style={styles.card}>
+            <Text style={styles.sub}>Cadastrar Disciplina</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome da disciplina"
+              placeholderTextColor={colors.textMuted}
+              value={nomeDisc}
+              onChangeText={setNomeDisc}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Carga horária"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numeric"
+              value={carga}
+              onChangeText={setCarga}
+            />
+
+            <Text style={{ color: colors.textMuted }}>Curso (opcional)</Text>
+            <Picker
+              selectedValue={cursoId}
+              onValueChange={v => setCursoId(v)}
+              dropdownIconColor={colors.text}
+              style={{ backgroundColor: colors.inputBg, borderRadius: 6 }}
+            >
+              <Picker.Item label="— nenhum —" value={undefined} />
+              {cursos.map(c => (
+                <Picker.Item key={c.id} label={c.nome} value={c.id} />
+              ))}
+            </Picker>
+
+            <Text style={{ color: colors.textMuted }}>Professor (opcional)</Text>
+            <Picker
+              selectedValue={professorId}
+              onValueChange={v => setProfessorId(v)}
+              dropdownIconColor={colors.text}
+              style={{ backgroundColor: colors.inputBg, borderRadius: 6 }}
+            >
+              <Picker.Item label="— nenhum —" value={undefined} />
+              {professores.map(p => (
+                <Picker.Item key={p.id} label={p.nome} value={p.id} />
+              ))}
+            </Picker>
+
+            {!!erroDisc && <Text style={styles.err}>{erroDisc}</Text>}
+            <TouchableOpacity style={styles.btn} onPress={onAddDisciplina}>
+              <Text style={styles.btnText}>Adicionar disciplina</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.listTitle}>Disciplinas cadastradas</Text>
+            {disciplinas.length === 0 ? (
+              <Text style={styles.muted}>Nenhuma disciplina.</Text>
+            ) : (
+              disciplinas.map(d => (
+                <Text key={d.id} style={styles.item}>
+                  • {d.nome} — {d.cargaHoraria}h
+                  {d.cursoId ? ` — Curso: ${cursoMap[d.cursoId] ?? d.cursoId}` : ''}
+                  {d.professorId ? ` — Prof.: ${profMap[d.professorId] ?? d.professorId}` : ''}
+                </Text>
+              ))
+            )}
+          </View>
+        )}
+
+        {tab === 'professor' && (
+          <View style={styles.card}>
+            <Text style={styles.sub}>Cadastrar Professor</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome"
+              placeholderTextColor={colors.textMuted}
+              value={nomeProf}
+              onChangeText={setNomeProf}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Titulação (ex.: Mestre)"
+              placeholderTextColor={colors.textMuted}
+              value={titulacao}
+              onChangeText={setTitulacao}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Tempo de docência (ex.: 5 anos)"
+              placeholderTextColor={colors.textMuted}
+              value={tempoDocencia}
+              onChangeText={setTempoDocencia}
+            />
+            {!!erroProf && <Text style={styles.err}>{erroProf}</Text>}
+            <TouchableOpacity style={styles.btn} onPress={onAddProfessor}>
+              <Text style={styles.btnText}>Adicionar professor</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.listTitle}>Professores cadastrados</Text>
+            {professores.length === 0 ? (
+              <Text style={styles.muted}>Nenhum professor.</Text>
+            ) : (
+              professores.map(p => (
+                <Text key={p.id} style={styles.item}>
+                  • {p.nome} — {p.titulacao} — {p.tempoDocencia}
+                </Text>
+              ))
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
-async function hashPassword(plain: string) {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(plain, salt);
+function cryptoRandom() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-async function comparePassword(plain: string, hash: string) {
-  return bcrypt.compare(plain, hash);
+function TabBtn({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity onPress={onPress} style={[styles.tabBtn, active && styles.tabBtnActive]}>
+      <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
 }
 
-// Middleware de auth
-function authMiddleware(req: any, res: any, next: any) {
-  const h = req.headers.authorization;
-  if (!h?.startsWith('Bearer ')) return res.status(401).json({ message: 'Token ausente' });
-  const token = h.slice(7);
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    req.user = payload;
-    return next();
-  } catch {
-    return res.status(401).json({ message: 'Token inválido' });
-  }
-}
-// ---- Rotas de Autenticação ----
-app.post('/auth/register', async (req, res) => {
-  const { email, password, name, role } = req.body ?? {};
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 16, backgroundColor: colors.background },
+  title: { color: colors.accent, fontWeight: '700', marginBottom: 8, fontSize: 18 },
 
-  // agora só obrigamos email e password
-  if (!email || !password) {
-    return res.status(400).json({ message: 'email e password são obrigatórios' });
-  }
+  badge: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginBottom: 8,
+    color: '#000',
+    fontWeight: '700',
+  },
+  ok: { backgroundColor: colors.accent },
+  fail: { backgroundColor: '#ffc107' },
 
-  // se não vier name, usa a parte antes do @ como nome
-  const finalName = name ?? String(email).split('@')[0];
+  tabs: { flexDirection: 'row', gap: 8, marginBottom: 10 },
 
-  try {
-    const exists = await prisma.user.findUnique({ where: { email } });
-    if (exists) {
-      return res.status(409).json({ message: 'E-mail já cadastrado' });
-    }
+  tabBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: colors.card,
+  },
+  tabBtnActive: {
+    backgroundColor: colors.primarySoft,
+  },
+  tabBtnText: { color: colors.textMuted },
+  tabBtnTextActive: { color: colors.text, fontWeight: '700' },
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name: finalName,
-        password: await hashPassword(password),
-        role: role ?? 'USER', // tudo que vier do app vira USER
-      },
-    });
+  card: {
+    backgroundColor: colors.card,
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 
-    const token = signToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    });
+  sub: { color: colors.text, fontWeight: '700' },
 
-    return res.json({
-      token,
-      user: {
-        id: user.id,
-        nome: user.name,
-        email: user.email,
-        perfil: user.role.toLowerCase(), // 'user'
-      },
-    });
-  } catch (e: any) {
-    return res
-      .status(500)
-      .json({ message: 'Erro ao registrar', error: e?.message });
-  }
-});
+  input: {
+    backgroundColor: colors.inputBg,
+    padding: 12,
+    borderRadius: 6,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 
+  btn: {
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+  },
+  btnText: { color: '#fff', fontWeight: '700' },
 
-app.post('/auth/login', async (req, res) => {
-  const { email, password } = req.body ?? {};
-  if (!email || !password) return res.status(400).json({ message: 'email e password são obrigatórios' });
-  try {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(401).json({ message: 'Credenciais inválidas' });
+  listTitle: {
+    color: colors.accent,
+    marginTop: 8,
+    marginBottom: 4,
+    fontWeight: '700',
+  },
 
-    const ok = await comparePassword(password, user.password);
-    if (!ok) return res.status(401).json({ message: 'Credenciais inválidas' });
+  item: { color: colors.text },
+  muted: { color: colors.textMuted },
 
-    const token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
-    return res.json({
-      token,
-      user: { id: user.id, nome: user.name, email: user.email, perfil: user.role.toLowerCase() }
-    });
-  } catch (e: any) {
-    return res.status(500).json({ message: 'Erro ao autenticar', error: e?.message });
-  }
-});
-
-app.get('/auth/me', authMiddleware, async (req: any, res) => {
-  const id = req.user?.sub as string;
-  const user = await prisma.user.findUnique({ where: { id } });
-  if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
-  return res.json({ id: user.id, nome: user.name, email: user.email, perfil: user.role.toLowerCase() });
-});
-
-app.listen(PORT, () => {
-  console.log(`API running on http://localhost:${PORT}`);
-});
-
-
-// ===================== ENTREGAS 2 e 3 =====================
-
-// -------- Alunos --------
-app.get('/alunos', authMiddleware, async (_req, res) => {
-  const alunos = await prisma.aluno.findMany({ orderBy: { createdAt: 'asc' } });
-  res.json(alunos);
-});
-
-app.post('/alunos', authMiddleware, async (req, res) => {
-  const { nome, email, matricula, curso } = req.body ?? {};
-  if (!nome || !email || !matricula || !curso) {
-    return res.status(400).json({ message: 'nome, email, matricula, curso são obrigatórios' });
-  }
-  const novo = await prisma.aluno.create({ data: { nome, email, matricula, curso } });
-  res.json(novo);
-});
-
-app.delete('/alunos/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  await prisma.aluno.delete({ where: { id } });
-  res.status(204).send();
-});
-
-// -------- Cursos --------
-app.get('/cursos', authMiddleware, async (_req, res) => {
-  const cursos = await prisma.curso.findMany({ orderBy: { createdAt: 'asc' } });
-  res.json(cursos);
-});
-
-app.post('/cursos', authMiddleware, async (req, res) => {
-  const { nome, turno } = req.body ?? {};
-  if (!nome || !turno) return res.status(400).json({ message: 'nome e turno são obrigatórios' });
-  const novo = await prisma.curso.create({ data: { nome, turno } });
-  res.json(novo);
-});
-
-app.delete('/cursos/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  await prisma.curso.delete({ where: { id } });
-  res.status(204).send();
-});
-
-// -------- Professores --------
-app.get('/professores', authMiddleware, async (_req, res) => {
-  const profs = await prisma.professor.findMany({ orderBy: { createdAt: 'asc' } });
-  res.json(profs);
-});
-
-app.post('/professores', authMiddleware, async (req, res) => {
-  const { nome, titulacao, tempoDocencia } = req.body ?? {};
-  if (!nome || !titulacao || !tempoDocencia)
-    return res.status(400).json({ message: 'nome, titulacao, tempoDocencia são obrigatórios' });
-  const novo = await prisma.professor.create({ data: { nome, titulacao, tempoDocencia } });
-  res.json(novo);
-});
-
-app.delete('/professores/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  await prisma.professor.delete({ where: { id } });
-  res.status(204).send();
-});
-
-// -------- Disciplinas --------
-app.get('/disciplinas', authMiddleware, async (_req, res) => {
-  const disciplinas = await prisma.disciplina.findMany({ orderBy: { createdAt: 'asc' } });
-  res.json(disciplinas);
-});
-
-app.post('/disciplinas', authMiddleware, async (req, res) => {
-  const { nome, cargaHoraria, cursoId, professorId } = req.body ?? {};
-  if (!nome || !Number.isFinite(cargaHoraria) || Number(cargaHoraria) <= 0)
-    return res.status(400).json({ message: 'nome e cargaHoraria (>0) são obrigatórios' });
-  const novo = await prisma.disciplina.create({
-    data: {
-      nome,
-      cargaHoraria: Number(cargaHoraria),
-      cursoId: cursoId ?? null,
-      professorId: professorId ?? null,
-    },
-  });
-  res.json(novo);
-});
-
-app.delete('/disciplinas/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  await prisma.disciplina.delete({ where: { id } });
-  res.status(204).send();
-});
-
-// -------- Notas (Entrega 3) --------
-// GET /notas?alunoId=...
-app.get('/notas', authMiddleware, async (req, res) => {
-  const alunoId = (req.query.alunoId as string) || null;
-  const where = alunoId ? { alunoId } : { alunoId: null };
-  const notas = await prisma.nota.findMany({ where, orderBy: { createdAt: 'asc' } });
-  res.json(notas);
-});
-
-// POST /notas/batch  { alunoId?: string, notas: {disciplinaId,n1,n2}[] }
-app.post('/notas/batch', authMiddleware, async (req, res) => {
-  const { alunoId, notas } = req.body ?? {};
-  if (!Array.isArray(notas)) return res.status(400).json({ message: 'notas deve ser array' });
-
-  await prisma.$transaction(async (tx) => {
-    for (const raw of notas) {
-      const disciplinaId = String(raw.disciplinaId);
-      const n1 = Number(raw.n1) || 0;
-      const n2 = Number(raw.n2) || 0;
-
-      if (alunoId) {
-        // caso COM alunoId → upsert normal funciona
-        await tx.nota.upsert({
-          where: {
-            disciplinaId_alunoId: {
-              disciplinaId,
-              alunoId: String(alunoId),
-            },
-          },
-          create: { disciplinaId, alunoId: String(alunoId), n1, n2 },
-          update: { n1, n2 },
-        });
-      } else {
-        // caso SEM alunoId (global) → não dá pra usar upsert com null
-        const existing = await tx.nota.findFirst({
-          where: { disciplinaId, alunoId: null },
-          select: { id: true },
-        });
-
-        if (existing) {
-          await tx.nota.update({
-            where: { id: existing.id },
-            data: { n1, n2 },
-          });
-        } else {
-          await tx.nota.create({
-            data: { disciplinaId, alunoId: null, n1, n2 },
-          });
-        }
-      }
-    }
-  });
-
-  res.status(204).send();
-});
-
-// -------- Boletim (Entrega 3) --------
-// GET /boletim?alunoId=...
-app.get('/boletim', authMiddleware, async (req, res) => {
-  const alunoId = (req.query.alunoId as string) || null;
-
-  const disciplinas = await prisma.disciplina.findMany({ orderBy: { createdAt: 'asc' } });
-
-  // pega notas compatíveis (por aluno ou globais)
-  const notas = await prisma.nota.findMany({
-    where: alunoId ? { alunoId } : { alunoId: null },
-  });
-
-  const byDisc = new Map(notas.map(n => [n.disciplinaId, n]));
-
-  function media(n1: number, n2: number) {
-    const m = Math.round((( (isFinite(n1) ? n1 : 0) + (isFinite(n2) ? n2 : 0) ) / 2) * 10) / 10;
-    return m;
-  }
-  function status(m: number) {
-    if (m >= 6) return 'aprovado';
-    if (m >= 4) return 'exame';
-    return 'reprovado';
-  }
-
-  const resp = disciplinas.map(d => {
-    const n = byDisc.get(d.id);
-    const n1 = n?.n1 ?? 0;
-    const n2 = n?.n2 ?? 0;
-    const m = media(n1, n2);
-    return {
-      disciplinaId: d.id,
-      disciplina: d.nome,
-      n1, n2,
-      media: m,
-      status: status(m),
-    };
-  });
-
-  res.json(resp);
+  err: { color: colors.danger },
+  errCenter: { color: colors.danger, textAlign: 'center', marginBottom: 8 },
 });

@@ -40,7 +40,14 @@ export default function Cadastros() {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [nomeCurso, setNomeCurso] = useState('');
   const [turno, setTurno] = useState<Turno>('noturno');
+  const [areaCurso, setAreaCurso] = useState('');
+  const [duracaoCurso, setDuracaoCurso] = useState('60');
+  const [coordenadorCurso, setCoordenadorCurso] = useState('');
+  const [editandoCursoId, setEditandoCursoId] = useState<string | null>(null);
+
+  
   const [erroCurso, setErroCurso] = useState<string | null>(null);
+ 
 
   // PROFESSOR
   const [professores, setProfessores] = useState<Professor[]>([]);
@@ -166,23 +173,33 @@ export default function Cadastros() {
 
   async function onAddCurso() {
     setErroCurso(null); setErroGeral(null);
-    if (!nomeCurso.trim()) {
-      setErroCurso('Informe o nome do curso.');
+    const duracaoNum = Number(duracaoCurso);
+    if (!nomeCurso.trim() || !areaCurso.trim() || !coordenadorCurso.trim() || !isFinite(duracaoNum) || duracaoNum <= 0) {
+      setErroCurso('Informe nome, área, duração (>0) e coordenador.');
       return;
     }
     try {
       if (USE_API) {
-        const novo = await apiCriarCurso({ nome: nomeCurso.trim(), turno });
+        const novo = await apiCriarCurso({
+          nome: nomeCurso.trim(),
+          turno,
+          area: areaCurso.trim(),
+          duracao: duracaoNum,
+          coordenador: coordenadorCurso.trim(),
+        });
         setCursos(prev => [...prev, novo]);
       } else {
-        const novo: Curso = { id: cryptoRandom(), nome: nomeCurso.trim(), turno };
-        await saveCursos([...cursos, novo]);
+        // mock local, se quiser
       }
       setNomeCurso('');
+      setAreaCurso('');
+      setDuracaoCurso('60');
+      setCoordenadorCurso('');
     } catch (e) {
       setErroGeral(fromAxiosError(e));
     }
   }
+
 
   async function onAddProfessor() {
     setErroProf(null); setErroGeral(null);
@@ -262,6 +279,7 @@ export default function Cadastros() {
       <View style={styles.tabs}>
         <TabBtn label="Aluno" active={tab === 'aluno'} onPress={() => setTab('aluno')} />
         <TabBtn label="Curso" active={tab === 'curso'} onPress={() => setTab('curso')} />
+          
         <TabBtn label="Disciplina" active={tab === 'disciplina'} onPress={() => setTab('disciplina')} />
         <TabBtn label="Professor" active={tab === 'professor'} onPress={() => setTab('professor')} />
       </View>
@@ -347,11 +365,40 @@ export default function Cadastros() {
               <Text style={styles.muted}>Nenhum curso.</Text>
             ) : cursos.map(c => (
               <Text key={c.id} style={styles.item}>
-                • {c.nome} — {c.turno}
+                • {c.nome} — {c.turno} — {c.area} — {c.duracao}h — Coord.: {c.coordenador}
               </Text>
             ))}
+
+            <TextInput
+              style={styles.input}
+              placeholder="Área"
+              placeholderTextColor={colors.textMuted}
+              value={areaCurso}
+              onChangeText={setAreaCurso}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Duração (horas)"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numeric"
+              value={duracaoCurso}
+              onChangeText={setDuracaoCurso}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Coordenador"
+              placeholderTextColor={colors.textMuted}
+              value={coordenadorCurso}
+              onChangeText={setCoordenadorCurso}
+            />
+
           </View>
         )}
+        
+
+
 
         {tab === 'disciplina' && (
           <View style={styles.card}>
@@ -539,3 +586,4 @@ const styles = StyleSheet.create({
   err: { color: colors.danger },
   errCenter: { color: colors.danger, textAlign: 'center', marginBottom: 8 },
 });
+
